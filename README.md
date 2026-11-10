@@ -69,6 +69,13 @@ Running the pipeline once or ten times on the same export gives exactly the same
 - **Safety net.** A dbt `unique` test on `activity_id` fails the build if duplicates ever appear.
 - **Trade-off.** I chose full refresh over incremental `MERGE` because the data is small and the BigQuery sandbox doesn't support DML. At scale, I'd switch to incremental models with a merge or partition strategy.
 
+### A raw layer that mirrors the source (ELT, not ETL)
+Python only **extracts and loads**: it copies `activities.csv` and the GPX track points into BigQuery as close to the source as possible, with every value kept as text. All cleaning, typing and calculations (units, paces, best efforts) happen afterwards in dbt.
+
+- **Why:** if a transformation turns out to be wrong, I fix the dbt model and rebuild. I never have to re-extract, and the original data is always there to check against.
+- **Minimal reshaping only:** column names are made BigQuery-safe (`Activity Date` → `activity_date`, duplicate headers become `distance_2`), and nested GPX XML is flattened into one row per GPS point (about 256,000 rows).
+- **Nothing is dropped silently:** activities without a GPX file (one `.fit` walk) are skipped and reported, not quietly ignored.
+
 ## Progress
 
 ### Phase 0: Plan
@@ -82,7 +89,7 @@ Running the pipeline once or ten times on the same export gives exactly the same
 ### Phase 1: Extract & load (Python)
 - [x] Create project folders and git-ignore raw data
 - [x] Read `activities.csv` from the zip
-- [ ] Parse the GPX tracks
+- [x] Parse the GPX tracks
 - [ ] Load into BigQuery raw tables (full reload each run)
 
 ### Phase 2: Transform (dbt)
