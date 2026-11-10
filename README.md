@@ -57,6 +57,18 @@ Only `activities.csv` and the GPX files are used. The rest of the export (messag
 - **Fitness & form:** 42-day fitness vs 7-day fatigue, using training load = perceived exertion × minutes
 - **Pace trends:** average and grade-adjusted pace over time
 
+## Key Attributes
+
+The engineering ideas this project demonstrates, and why they matter.
+
+### Idempotency
+Running the pipeline once or ten times on the same export gives exactly the same data. Pipelines get rerun all the time (failures, retries, backfills, debugging), and a non-idempotent pipeline silently double-counts on every rerun.
+
+- **Full refresh, not append.** Each Strava export contains my full history, so every run replaces the raw tables instead of adding to them.
+- **Unambiguous input.** The loader expects exactly one export in `data/raw/` and stops with an error otherwise, rather than guessing by file timestamp.
+- **Safety net.** A dbt `unique` test on `activity_id` fails the build if duplicates ever appear.
+- **Trade-off.** I chose full refresh over incremental `MERGE` because the data is small and the BigQuery sandbox doesn't support DML. At scale, I'd switch to incremental models with a merge or partition strategy.
+
 ## Progress
 
 ### Phase 0: Plan
@@ -69,7 +81,7 @@ Only `activities.csv` and the GPX files are used. The rest of the export (messag
 
 ### Phase 1: Extract & load (Python)
 - [x] Create project folders and git-ignore raw data
-- [ ] Read `activities.csv` from the zip
+- [x] Read `activities.csv` from the zip
 - [ ] Parse the GPX tracks
 - [ ] Load into BigQuery raw tables (full reload each run)
 
