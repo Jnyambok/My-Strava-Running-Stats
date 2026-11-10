@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project: raw Strava exports (personal data, never commit)
+data/raw/*
+!data/raw/.gitkeep

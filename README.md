@@ -68,7 +68,7 @@ Only `activities.csv` and the GPX files are used. The rest of the export (messag
 - [x] Set up the BigQuery sandbox
 
 ### Phase 1: Extract & load (Python)
-- [ ] Create project folders and git-ignore raw data
+- [x] Create project folders and git-ignore raw data
 - [ ] Read `activities.csv` from the zip
 - [ ] Parse the GPX tracks
 - [ ] Load into BigQuery raw tables (full reload each run)
