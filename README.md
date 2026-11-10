@@ -30,7 +30,7 @@ Strava export (zip) ──► Python ──► BigQuery ──► dbt ──► 
 **Cost: free.** BigQuery runs in the free **sandbox**, with no billing account, so it can't be charged. The sandbox shapes the design:
 
 - **No DML** (`INSERT` / `UPDATE` / `MERGE`), so each run fully reloads the raw tables with batch load jobs and dbt builds plain tables and views rather than incremental models. With about 130 activities, a full reload takes seconds.
-- **Tables expire after 60 days.** That's fine, because the export zip is the source of truth and the website reads its own `data.json`, so it keeps working even if BigQuery is empty.
+- **Tables expire after 60 days**, counted from when the table was *created*: reloading with `WRITE_TRUNCATE` doesn't reset the clock. That's fine, because every pipeline run loads the raw tables first (recreating them if they've expired), the export zip is the source of truth, and the website reads its own `data.json`, so it keeps working even if BigQuery is empty.
 - **10 GiB lifetime storage**, so staging models are views (which use no storage) and only the small final tables are stored.
 
 ## The data
@@ -64,9 +64,21 @@ The engineering ideas this project demonstrates, and why they matter.
 ### Idempotency
 Running the pipeline once or ten times on the same export gives exactly the same data. Pipelines get rerun all the time (failures, retries, backfills, debugging), and a non-idempotent pipeline silently double-counts on every rerun.
 
-- **Full refresh, not append.** Each Strava export contains my full history, so every run replaces the raw tables instead of adding to them.
-- **Unambiguous input.** The loader expects exactly one export in `data/raw/` and stops with an error otherwise, rather than guessing by file timestamp.
-- **Safety net.** A dbt `unique` test on `activity_id` fails the build if duplicates ever appear.
+Idempotency isn't one line of code. It's a chain, and every link has to hold:
+
+| Link | Where | What it guarantees |
+|---|---|---|
+| **1. Unambiguous input** | `find_export()` requires exactly one zip | The same command always reads the same file, with no guessing by file timestamp |
+| **2. Full history per input** | How Strava exports work | One zip contains everything, so loads never need combining |
+| **3. Deterministic reading** | `read_activities()` and `read_tracks()` | The same zip always produces the same rows |
+| **4. Fixed schema** | Explicit `SchemaField` list, no autodetect | The table has the same shape on every load |
+| **5. Replace, not add** | BigQuery `WRITE_TRUNCATE` | Old data is thrown away, so earlier runs can't leak into new ones |
+| **6. All-or-nothing load** | BigQuery load jobs are atomic | A failed load leaves the previous table intact, so it's always safe to rerun after a crash |
+
+**Same zip in, same tables out, however many times it runs.**
+
+- **Evidence.** I ran the load twice in a row: 130 activities and 255,651 track points both times. Only `_loaded_at` changed, which is metadata about *when* it ran, not the data itself.
+- **Safety net.** A dbt `unique` test on `activity_id` fails the build if a duplicate ever appears. The pipeline is designed so duplicates can't happen, and the test checks that they didn't.
 - **Trade-off.** I chose full refresh over incremental `MERGE` because the data is small and the BigQuery sandbox doesn't support DML. At scale, I'd switch to incremental models with a merge or partition strategy.
 
 ### A raw layer that mirrors the source (ELT, not ETL)
@@ -75,6 +87,11 @@ Python only **extracts and loads**: it copies `activities.csv` and the GPX track
 - **Why:** if a transformation turns out to be wrong, I fix the dbt model and rebuild. I never have to re-extract, and the original data is always there to check against.
 - **Minimal reshaping only:** column names are made BigQuery-safe (`Activity Date` → `activity_date`, duplicate headers become `distance_2`), and nested GPX XML is flattened into one row per GPS point (about 256,000 rows).
 - **Nothing is dropped silently:** activities without a GPX file (one `.fit` walk) are skipped and reported, not quietly ignored.
+
+### Configuration lives outside the code
+The BigQuery project and dataset names are read from a git-ignored `.env` file, with a committed `.env.example` as the template. They aren't secrets, but keeping them out of the code means anyone can point the pipeline at their own project, and Python and dbt read the same settings from one place.
+
+- **No silent defaults.** If `GCP_PROJECT_ID` is missing, the loader stops with a clear message instead of falling back to gcloud's default project, which could be a different, billed project.
 
 ## Progress
 
@@ -90,7 +107,7 @@ Python only **extracts and loads**: it copies `activities.csv` and the GPX track
 - [x] Create project folders and git-ignore raw data
 - [x] Read `activities.csv` from the zip
 - [x] Parse the GPX tracks
-- [ ] Load into BigQuery raw tables (full reload each run)
+- [x] Load into BigQuery raw tables (full reload each run)
 
 ### Phase 2: Transform (dbt)
 - [ ] Set up a dbt project connected to BigQuery
