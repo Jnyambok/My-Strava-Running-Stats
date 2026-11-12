@@ -92,6 +92,8 @@ Python only **extracts and loads**: it copies `activities.csv` and the GPX track
 The BigQuery project and dataset names are read from a git-ignored `.env` file, with a committed `.env.example` as the template. They aren't secrets, but keeping them out of the code means anyone can point the pipeline at their own project, and Python and dbt read the same settings from one place.
 
 - **No silent defaults.** If `GCP_PROJECT_ID` is missing, the loader stops with a clear message instead of falling back to gcloud's default project, which could be a different, billed project.
+- **One setting, two tools.** dbt's `profiles.yml` reads the same value with `env_var('GCP_PROJECT_ID')`. dbt loads `.env` automatically, and it logs in with `oauth` (my saved Google login), so no key files exist anywhere.
+- **Pinned dependencies.** `requirements.txt` pins `dbt-core~=1.12.0`. Unpinned, pip installed a 1.13 *beta*. Pinning means the same install gives the same behaviour months later.
 
 ## Progress
 
@@ -110,7 +112,7 @@ The BigQuery project and dataset names are read from a git-ignored `.env` file, 
 - [x] Load into BigQuery raw tables (full reload each run)
 
 ### Phase 2: Transform (dbt)
-- [ ] Set up a dbt project connected to BigQuery
+- [x] Set up a dbt project connected to BigQuery
 - [ ] Staging models: clean columns, fix units, keep runs only
 - [ ] Mart models for the dashboard
 - [ ] Add dbt tests and docs
