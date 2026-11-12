@@ -1,0 +1,25 @@
+# How dbt connects to BigQuery.
+#
+# No secrets live here, so this file is safe to commit:
+#   - method: oauth uses your saved Google login
+#     (the same one the Python loader uses; set up with
+#     `gcloud auth application-default login`)
+#   - the project ID comes from .env via env_var(), so Python and dbt
+#     share one setting
+#
+# dbt looks for profiles.yml in the folder you run it from first,
+# so run dbt commands from inside strava_dbt/.
+
+strava_dbt:            # must match `profile:` in dbt_project.yml
+  target: dev          # which output below to use by default
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT_ID') }}"  # no default on purpose: fail loudly if missing
+      dataset: strava  # where dbt builds its models (separate from strava_raw)
+      location: US     # must match strava_raw's location
+      threads: 4       # how many models dbt builds in parallel
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      priority: interactive
