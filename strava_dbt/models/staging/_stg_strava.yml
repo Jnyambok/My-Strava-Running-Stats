@@ -1,0 +1,41 @@
+version: 2
+## Property Files for your staging models
+## Descriptions of the model and its columns , tests on columns
+## Describes what we built
+models:
+  - name: stg_strava__activities
+    description: One row per Strava activity (runs, walks, hikes), typed and renamed. Private notes are excluded.
+    columns:
+      - name: activity_id
+        description: Strava's activity ID. Primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: started_at
+        description: Start time in UTC.
+        data_tests:
+          - not_null
+      - name: activity_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Run', 'Walk', 'Hike']
+
+  - name: stg_strava__track_points
+    description: One row per GPS point per activity, from the GPX files. Grain is activity_id + point_index.
+    columns:
+      - name: activity_id
+        description: The activity this point belongs to.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_strava__activities')
+                field: activity_id
+      - name: point_index
+        description: Position of the point within its track, starting at 0.
+        data_tests:
+          - not_null
+      - name: recorded_at
+        data_tests:
+          - not_null

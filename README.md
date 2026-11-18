@@ -107,6 +107,16 @@ Data moves through three layers, and each one has a single job:
 - **Staging mirrors the source one-to-one.** Every row of the raw table survives (walks and hikes too); filtering to runs happens in the marts. If I later want walk stats, the clean data is already there.
 - **Privacy is decided at the doorway.** Private notes and descriptions are never selected in staging, so nothing downstream can leak them to the public site.
 
+### Data tests guard every layer
+Each test is a query that returns bad rows; zero rows means pass. `dbt build` runs them straight after each model, so a failing model stops everything downstream from building on bad data, and the dashboard never sees it.
+
+| Test | Column | Protects against |
+|---|---|---|
+| `unique` + `not_null` | `activity_id` | Duplicate or missing activities (the idempotency safety net) |
+| `accepted_values` | `activity_type` | A new type (e.g. a ride) slipping into the run metrics unnoticed |
+| `relationships` | `track_points.activity_id` | GPS points with no matching activity (a foreign-key check BigQuery doesn't enforce) |
+| Singular SQL test | `activity_id` + `point_index` | Duplicate GPS points. `unique` only takes one column, so the two-column grain gets its own query |
+
 ### Raw tables are declared as dbt sources
 dbt models never hard-code `strava_raw.activities`. They read it through `{{ source('strava', 'activities') }}`, declared once in `models/staging/_sources.yml`.
 
@@ -133,9 +143,10 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 ### Phase 2: Transform (dbt)
 - [x] Set up a dbt project connected to BigQuery
 - [x] Declare the raw tables as dbt sources
-- [ ] Staging models: pick columns, rename, cast types
+- [x] Staging models: pick columns, rename, cast types
+- [x] Tests on the staging models
 - [ ] Mart models for the dashboard
-- [ ] Add dbt tests and docs
+- [ ] Tests and docs on the marts
 
 ### Phase 3: Metrics
 - [ ] Totals
