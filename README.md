@@ -125,6 +125,15 @@ Each test is a query that returns bad rows; zero rows means pass. `dbt build` ru
 - **Deterministic range.** The spine runs from the first to the last run in the data, not to `current_date()`, so rebuilding the same export always gives the same rows (idempotency again).
 - **Reconciliation test.** A singular test checks that total km in the weekly table equals total km in `fct_runs`. A join that drops or duplicates runs would fail it, even if `unique` and `not_null` passed.
 
+### Fitness & form with window functions
+`fct_daily_fitness` has one row per day. Each run's load is effort (1–10) × minutes; fitness is the load over the last 42 days ÷ 42, fatigue the last 7 days ÷ 7, and form is fitness − fatigue.
+
+- **Window functions keep every row.** `sum(...) over (order by day rows between 41 preceding and current row)` adds a rolling total next to each day, where `group by` would collapse the rows.
+- **The spine makes rows = days.** `rows between 6 preceding` counts *rows*. Without a row for every rest day it would mean "the last 7 runs", which could stretch over weeks. (`range between` on `unix_date(day)` is the alternative that counts by value.)
+- **Divide by 42, not `avg()`.** In the first weeks of data `avg()` would divide by fewer days and overstate fitness. There was no training before the history starts, so those days count as 0.
+- **Honest estimates.** 34 of 117 runs have no effort rating. Counting them as 0 load would make fitness crash, so they use my average rating, and `estimated_runs` records how many runs each day were estimated.
+- **Trade-off.** Strava and TrainingPeaks use exponentially weighted averages, which need recursion that SQL handles badly. Simple rolling averages show the same trends.
+
 ### Raw tables are declared as dbt sources
 dbt models never hard-code `strava_raw.activities`. They read it through `{{ source('strava', 'activities') }}`, declared once in `models/staging/_sources.yml`.
 
@@ -160,7 +169,7 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 - [ ] Totals
 - [x] Weekly distance
 - [ ] Best efforts (5K / 10K / half)
-- [ ] Fitness & form
+- [x] Fitness & form
 - [ ] Pace trends
 
 ### Phase 4: Website
