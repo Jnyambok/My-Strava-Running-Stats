@@ -1,0 +1,18 @@
+version: 2
+# Describes the intermediate layer: reusable calculations between staging and marts
+
+models:
+  - name: int_track_point_distances
+    description: One row per GPS point, with the distance from the previous point and running distance and time since the activity started.
+    columns:
+      - name: activity_id
+        data_tests:
+          - not_null
+      - name: distance_m
+        description: Cumulative GPS distance from the start of the activity, in metres.
+        data_tests:
+          - not_null
+      - name: elapsed_s
+        description: Seconds since the first point of the activity (includes pauses).
+        data_tests:
+          - not_null
