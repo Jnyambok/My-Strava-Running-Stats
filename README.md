@@ -95,6 +95,13 @@ The BigQuery project and dataset names are read from a git-ignored `.env` file, 
 - **One setting, two tools.** dbt's `profiles.yml` reads the same value with `env_var('GCP_PROJECT_ID')`. dbt loads `.env` automatically, and it logs in with `oauth` (my saved Google login), so no key files exist anywhere.
 - **Pinned dependencies.** `requirements.txt` pins `dbt-core~=1.12.0`. Unpinned, pip installed a 1.13 *beta*. Pinning means the same install gives the same behaviour months later.
 
+### Raw tables are declared as dbt sources
+dbt models never hard-code `strava_raw.activities`. They read it through `{{ source('strava', 'activities') }}`, declared once in `models/staging/_sources.yml`.
+
+- **One place to change.** The dataset name comes from `.env` in one YAML line. If it's renamed, or someone runs the project against their own dataset, no SQL changes.
+- **Lineage.** dbt knows which models depend on which raw tables, so it builds them in the right order and `dbt docs` draws the graph from raw data to dashboard.
+- **Raw data can be tested and documented.** Descriptions state each table's grain (one row per activity, one row per GPS point), and tests can run on the raw tables before any model uses them.
+
 ## Progress
 
 ### Phase 0: Plan

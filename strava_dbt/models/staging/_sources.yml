@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: strava    #The nickname to give the models
+    schema: "{{env_var('BQ_RAW_DATASET')}}"  #dataset in BigQuery
+    description: The data cames from Big Query to be transformed by dbt
+    tables:
+      - name: activities
+        description: One row per activity, from activities.csv in the export.
+      - name: track_points
+        description: One row per GPS point, from the activity GPX files. Links to activities via activity_id.
