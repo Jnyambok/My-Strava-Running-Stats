@@ -1,5 +1,5 @@
 version: 2
-
+#describes what came in (raw tables dbt didnt build)
 sources:
   - name: strava    #The nickname to give the models
     schema: "{{env_var('BQ_RAW_DATASET')}}"  #dataset in BigQuery

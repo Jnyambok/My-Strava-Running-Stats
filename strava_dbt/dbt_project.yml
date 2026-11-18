@@ -32,3 +32,8 @@ models:
   strava_dbt:
     staging:
       +materialized: view
+    marts:
+      +materialized: table
+
+vars:
+  timezone: Africa/Nairobi
