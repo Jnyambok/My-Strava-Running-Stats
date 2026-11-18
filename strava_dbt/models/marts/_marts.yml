@@ -20,5 +20,19 @@ models:
       - name: pace_s_per_km
         description: Moving time per km, in seconds. Lower is faster.
       - name: training_load
-        description: Perceived exertion x moving minutes (Foster session-RPE). NULL when the run wasn't rated.
-        
+        description: Perceived exertion x moving minutes (Foster session-RPE). NULL when the run wasn't rated
+  - name: fct_weekly_runs
+    description: One row per ISO week (Monday start), including weeks with no runs (zeros). Periodic snapshot of fct_runs.
+    columns:
+      - name: week_start
+        description: Monday of the week, local time.
+        data_tests:
+          - unique
+          - not_null
+      - name: distance_km
+        data_tests:
+          - not_null
+      - name: training_load
+        description: Sum of rated runs' load. NULL when no run that week was rated (unknown, not zero).
+    
+
