@@ -143,6 +143,12 @@ Strava's best efforts are a paid feature, so `fct_best_efforts` finds the fastes
 - **No special cases.** A 3 km run has no mark 500, so the join simply produces no 5K for it.
 - **PB history.** `best_time_s = min(best_time_s) over (partition by effort order by run_date)` flags every run that set a new personal best at the time.
 
+### Averages that don't lie
+- **Pace is a ratio, so it's never averaged directly.** Monthly pace is total time ÷ total distance. `avg(pace)` would count a 2 km jog the same as a 20 km long run. In July 2026 it would have reported 6:18/km instead of the true 6:31/km.
+- **Grade-adjusted pace is weighted by distance**: `sum(gap × km) / sum(km)`.
+- **Knowing when *not* to fill gaps.** The weekly table uses a date spine because an empty week really is 0 km. The monthly pace table doesn't, because a month without runs has no pace at all: filling it with 0 would plot an impossibly fast month. Those months are left out and show as a gap.
+- **"Last updated" comes from the data.** The totals table carries the loader's `_loaded_at` timestamp, so the date on the website is when the export was actually loaded, not when the page was built.
+
 ### Raw tables are declared as dbt sources
 dbt models never hard-code `strava_raw.activities`. They read it through `{{ source('strava', 'activities') }}`, declared once in `models/staging/_sources.yml`.
 
@@ -171,15 +177,15 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 - [x] Declare the raw tables as dbt sources
 - [x] Staging models: pick columns, rename, cast types
 - [x] Tests on the staging models
-- [ ] Mart models for the dashboard
+- [x] Mart models for the dashboard
 - [ ] Tests and docs on the marts
 
 ### Phase 3: Metrics
-- [ ] Totals
+- [x] Totals
 - [x] Weekly distance
 - [x] Best efforts (5K / 10K / half)
 - [x] Fitness & form
-- [ ] Pace trends
+- [x] Pace trends
 
 ### Phase 4: Website
 - [ ] Export the marts to `data.json`

@@ -14,7 +14,7 @@ renamed as (
         parse_timestamp('%b %d, %Y, %I:%M:%S %p', activity_date)     as started_at,
 
         -- what
-        activity_name,
+        regexp_replace(trim(activity_name), r'\s+', ' ')            as activity_name,
         activity_type,
 
         -- distance & time
