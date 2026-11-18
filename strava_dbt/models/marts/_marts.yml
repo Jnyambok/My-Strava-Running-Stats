@@ -1,0 +1,24 @@
+version: 2
+# Describes the gold layer: business-ready tables for the dashboard
+
+models:
+  - name: fct_runs
+    description: One row per run (walks and hikes excluded), in local Nairobi time and human units.
+    columns:
+      - name: activity_id
+        description: Strava's activity ID. Primary key.
+        data_tests:
+          - unique
+          - not_null
+      - name: run_date
+        description: Date of the run in local time.
+        data_tests:
+          - not_null
+      - name: distance_km
+        data_tests:
+          - not_null
+      - name: pace_s_per_km
+        description: Moving time per km, in seconds. Lower is faster.
+      - name: training_load
+        description: Perceived exertion x moving minutes (Foster session-RPE). NULL when the run wasn't rated.
+        
