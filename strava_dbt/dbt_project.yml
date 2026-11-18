@@ -29,4 +29,6 @@ clean-targets:         # directories to be removed by `dbt clean`
 # Folder-level settings (e.g. staging = views, marts = tables) get added here
 # as we create those folders in the next steps.
 models:
-  strava_dbt: {}
+  strava_dbt:
+    staging:
+      +materialized: view
