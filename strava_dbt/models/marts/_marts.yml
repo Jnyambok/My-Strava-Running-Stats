@@ -20,7 +20,8 @@ models:
       - name: pace_s_per_km
         description: Moving time per km, in seconds. Lower is faster.
       - name: training_load
-        description: Perceived exertion x moving minutes (Foster session-RPE). NULL when the run wasn't rated
+        description: Perceived exertion x moving minutes (Foster session-RPE). NULL when the run wasn't rated.
+
   - name: fct_weekly_runs
     description: One row per ISO week (Monday start), including weeks with no runs (zeros). Periodic snapshot of fct_runs.
     columns:
@@ -34,6 +35,7 @@ models:
           - not_null
       - name: training_load
         description: Sum of rated runs' load. NULL when no run that week was rated (unknown, not zero).
+
   - name: fct_daily_fitness
     description: One row per day from the first to the last run. Rolling training load (fitness 42-day, fatigue 7-day, form = fitness - fatigue). Unrated runs use the average effort rating.
     columns:
@@ -53,5 +55,18 @@ models:
         description: Total load over the last 7 days divided by 7.
       - name: form
         description: Fitness minus fatigue. Positive = fresh, negative = tired.
-    
 
+  - name: fct_best_efforts
+    description: One row per run per effort distance (5K, 10K, half) that the run was long enough for. Fastest stretch from the GPS track, on a 10 m grid.
+    columns:
+      - name: effort
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['5K', '10K', 'Half marathon']
+      - name: best_time_s
+        description: Fastest elapsed seconds over the effort distance within this run (includes pauses).
+        data_tests:
+          - not_null
+      - name: is_personal_best
+        description: True if this was the fastest time for this effort up to that date.
