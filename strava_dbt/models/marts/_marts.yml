@@ -70,3 +70,26 @@ models:
           - not_null
       - name: is_personal_best
         description: True if this was the fastest time for this effort up to that date.
+
+  - name: fct_running_totals
+    description: One row of lifetime totals for the dashboard tiles, plus when the data was loaded.
+    columns:
+      - name: total_runs
+        data_tests:
+          - not_null
+      - name: data_loaded_at
+        description: When the Python loader last loaded the Strava export (UTC). Drives "Last updated on".
+        data_tests:
+          - not_null
+
+  - name: fct_monthly_pace
+    description: One row per month with at least one run. Pace is total time / total distance, not an average of paces. Months with no runs are left out.
+    columns:
+      - name: month_start
+        data_tests:
+          - unique
+          - not_null
+      - name: pace_s_per_km
+        description: Seconds per km over the whole month (time-weighted).
+        data_tests:
+          - not_null
