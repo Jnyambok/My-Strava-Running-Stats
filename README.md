@@ -117,6 +117,14 @@ Each test is a query that returns bad rows; zero rows means pass. `dbt build` ru
 | `relationships` | `track_points.activity_id` | GPS points with no matching activity (a foreign-key check BigQuery doesn't enforce) |
 | Singular SQL test | `activity_id` + `point_index` | Duplicate GPS points. `unique` only takes one column, so the two-column grain gets its own query |
 
+### Empty weeks count as zero (date spine)
+`fct_weekly_runs` has one row per week from my first run to my last: 79 weeks, of which only 51 have runs. A plain `group by` would return just the 51, so a chart would skip straight over a month off and the average weekly distance would look higher than it really is.
+
+- **Spine, then left join.** `generate_date_array` builds every Monday, and the weekly totals are left-joined onto it, so weeks with no runs survive and become 0.
+- **NULL vs 0.** Distance in an empty week is 0. Training load in a week where runs weren't rated stays NULL, because it's *unknown*, not zero.
+- **Deterministic range.** The spine runs from the first to the last run in the data, not to `current_date()`, so rebuilding the same export always gives the same rows (idempotency again).
+- **Reconciliation test.** A singular test checks that total km in the weekly table equals total km in `fct_runs`. A join that drops or duplicates runs would fail it, even if `unique` and `not_null` passed.
+
 ### Raw tables are declared as dbt sources
 dbt models never hard-code `strava_raw.activities`. They read it through `{{ source('strava', 'activities') }}`, declared once in `models/staging/_sources.yml`.
 
@@ -150,7 +158,7 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 
 ### Phase 3: Metrics
 - [ ] Totals
-- [ ] Weekly distance
+- [x] Weekly distance
 - [ ] Best efforts (5K / 10K / half)
 - [ ] Fitness & form
 - [ ] Pace trends
