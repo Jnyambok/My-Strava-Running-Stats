@@ -13,7 +13,7 @@ Strava's free tier shows the basics. The more useful training metrics, such as f
 ## How it works
 
 ```
-Strava export (zip) ──► Python ──► BigQuery ──► dbt ──► data.json ──► Static website
+Strava export (zip) ──► Python ──► BigQuery ──► dbt ──► data.json ──► Static website (GitHub Pages)
    (every 2 weeks)        └──────────────── one command ─────────────────┘
 ```
 
@@ -107,6 +107,13 @@ Data moves through three layers, and each one has a single job:
 - **Staging mirrors the source one-to-one.** Every row of the raw table survives (walks and hikes too); filtering to runs happens in the marts. If I later want walk stats, the clean data is already there.
 - **Privacy is decided at the doorway.** Private notes and descriptions are never selected in staging, so nothing downstream can leak them to the public site.
 
+### A public dashboard with nothing to leak
+The site is plain HTML, CSS and JavaScript in `docs/`, served by GitHub Pages. `export/export_data.py` writes the marts to `docs/data.json`, and the page draws everything from that one file with Chart.js.
+
+- **No credentials in the browser.** The page never talks to BigQuery, so there's no key to steal, and it keeps working even after the sandbox tables expire.
+- **Export only what's shown.** `data.json` is public, so it holds no GPS coordinates, no private notes and no everyday run titles (many of mine name my home estate). Only the personal-best race names are included.
+- **Same rules as the warehouse.** The time filter's average pace is total time ÷ total distance, and the "Last 4 weeks" range counts back from the last run in the data, not from today, so the page shows the same numbers whenever it's opened.
+
 ### Data tests guard every layer
 Each test is a query that returns bad rows; zero rows means pass. `dbt build` runs them straight after each model, so a failing model stops everything downstream from building on bad data, and the dashboard never sees it.
 
@@ -188,10 +195,10 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 - [x] Pace trends
 
 ### Phase 4: Website
-- [ ] Export the marts to `data.json`
-- [ ] Page layout with the orange gradient design
-- [ ] Charts
-- [ ] "Last updated on …" date
+- [x] Export the marts to `data.json`
+- [x] Page layout with the orange gradient design
+- [x] Charts
+- [x] "Last updated on …" date
 - [ ] Publish on GitHub Pages
 
 ### Phase 5: Routine
