@@ -134,6 +134,15 @@ Each test is a query that returns bad rows; zero rows means pass. `dbt build` ru
 - **Honest estimates.** 34 of 117 runs have no effort rating. Counting them as 0 load would make fitness crash, so they use my average rating, and `estimated_runs` records how many runs each day were estimated.
 - **Trade-off.** Strava and TrainingPeaks use exponentially weighted averages, which need recursion that SQL handles badly. Simple rolling averages show the same trends.
 
+### Best efforts from raw GPS (self-join on a distance grid)
+Strava's best efforts are a paid feature, so `fct_best_efforts` finds the fastest 5K, 10K and half inside every run from the 255,651 GPS points.
+
+- **Intermediate layer.** `int_track_point_distances` measures each step with BigQuery GIS (`st_distance` between `st_geogpoint`s) and keeps a running total per activity with `lag()` and `sum() over (partition by activity_id order by point_index)`. `partition by` stops a window from crossing into another run.
+- **Reconciled against Strava.** A test checks that every run's GPS distance is within 5% of Strava's own (actual: +0.65% on average, +2.6% at most, because Strava smooths GPS jitter).
+- **The trick.** Comparing every point with every other point is slow. Snapping each track to 10 m marks turns "where was I 5 km later?" into an exact-match self-join (`finish.mark = start.mark + 500`), and the whole model runs in seconds. The cost is up to 10 m (about 3 s) of precision.
+- **No special cases.** A 3 km run has no mark 500, so the join simply produces no 5K for it.
+- **PB history.** `best_time_s = min(best_time_s) over (partition by effort order by run_date)` flags every run that set a new personal best at the time.
+
 ### Raw tables are declared as dbt sources
 dbt models never hard-code `strava_raw.activities`. They read it through `{{ source('strava', 'activities') }}`, declared once in `models/staging/_sources.yml`.
 
@@ -168,7 +177,7 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 ### Phase 3: Metrics
 - [ ] Totals
 - [x] Weekly distance
-- [ ] Best efforts (5K / 10K / half)
+- [x] Best efforts (5K / 10K / half)
 - [x] Fitness & form
 - [ ] Pace trends
 
