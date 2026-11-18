@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Running Stats</title>
+  <meta name="description" content="Personal running dashboard built from my Strava export with Python, BigQuery and dbt.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="dashboard">
+
+    <!-- Header: identity, KPI tiles, time filter -->
+    <header class="card header">
+      <div class="identity">
+        <div class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2a5.1 5.1 0 0 1-4.4-2.4l-1-1.6a2.1 2.1 0 0 0-2.6-.8L6 8.3V13h2V9.6l1.8-.7"/></svg>
+        </div>
+        <div>
+          <h1>My Running Stats</h1>
+          <p class="muted">Nairobi, Kenya</p>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi">
+          <span class="kpi-label">Distance</span>
+          <span class="kpi-value" id="kpi-distance">–</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Avg pace</span>
+          <span class="kpi-value" id="kpi-pace">–</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Runs</span>
+          <span class="kpi-value" id="kpi-runs">–</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Time</span>
+          <span class="kpi-value" id="kpi-time">–</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Elevation</span>
+          <span class="kpi-value" id="kpi-elevation">–</span>
+        </div>
+      </div>
+
+      <div class="filters" role="group" aria-label="Time range">
+        <button type="button" data-days="all" class="active">All time</button>
+        <button type="button" data-days="28">Last 4 weeks</button>
+        <button type="button" data-days="84">Last 12 weeks</button>
+        <button type="button" data-days="365">Last 12 months</button>
+      </div>
+    </header>
+
+    <!-- Left: when I run -->
+    <section class="card heatmap-card">
+      <h2>Workout Time Preference</h2>
+      <div class="heatmap-wrap">
+        <table class="heatmap" id="heatmap"></table>
+      </div>
+    </section>
+
+    <!-- Right column -->
+    <section class="card pb-card">
+      <h2>Personal Bests</h2>
+      <div class="table-wrap">
+        <table class="pb-table">
+          <thead>
+            <tr>
+              <th>Distance</th>
+              <th>Time</th>
+              <th>Pace</th>
+              <th>Date</th>
+              <th>Run</th>
+              <th class="center">Link</th>
+            </tr>
+          </thead>
+          <tbody id="pb-body"></tbody>
+        </table>
+      </div>
+      <p class="note" id="pb-note"></p>
+    </section>
+
+    <section class="card fitness-card">
+      <div class="card-title">
+        <h2>Fitness &amp; Form</h2>
+        <span class="pill" id="form-pill"></span>
+      </div>
+      <div class="chart-box"><canvas id="fitness-chart"></canvas></div>
+    </section>
+
+    <section class="card weekly-card">
+      <h2>Total Distance (km) by Week</h2>
+      <div class="chart-box"><canvas id="weekly-chart"></canvas></div>
+    </section>
+
+    <section class="card pace-card">
+      <h2>Monthly Pace</h2>
+      <div class="chart-box"><canvas id="pace-chart"></canvas></div>
+    </section>
+
+    <footer class="footer">
+      <span id="updated">Last updated on –</span>
+      <span>Built with Python, BigQuery &amp; dbt · <a href="https://github.com/Jnyambok/My-Strava-Running-Stats">Source on GitHub</a></span>
+      <span>Data from my Strava export. Not affiliated with Strava.</span>
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
