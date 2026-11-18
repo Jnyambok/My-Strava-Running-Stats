@@ -95,6 +95,18 @@ The BigQuery project and dataset names are read from a git-ignored `.env` file, 
 - **One setting, two tools.** dbt's `profiles.yml` reads the same value with `env_var('GCP_PROJECT_ID')`. dbt loads `.env` automatically, and it logs in with `oauth` (my saved Google login), so no key files exist anywhere.
 - **Pinned dependencies.** `requirements.txt` pins `dbt-core~=1.12.0`. Unpinned, pip installed a 1.13 *beta*. Pinning means the same install gives the same behaviour months later.
 
+### Layered models (medallion: bronze → silver → gold)
+Data moves through three layers, and each one has a single job:
+
+| Medallion | Here | Job |
+|---|---|---|
+| **Bronze** | `strava_raw` (Python loads it) | The source exactly as it arrived, all text |
+| **Silver** | dbt `staging` views | One model per raw table: pick columns, rename, cast types. No joins, no business logic |
+| **Gold** | dbt `marts` tables | Business-ready answers for the dashboard: runs only, weekly totals, best efforts |
+
+- **Staging mirrors the source one-to-one.** Every row of the raw table survives (walks and hikes too); filtering to runs happens in the marts. If I later want walk stats, the clean data is already there.
+- **Privacy is decided at the doorway.** Private notes and descriptions are never selected in staging, so nothing downstream can leak them to the public site.
+
 ### Raw tables are declared as dbt sources
 dbt models never hard-code `strava_raw.activities`. They read it through `{{ source('strava', 'activities') }}`, declared once in `models/staging/_sources.yml`.
 
@@ -120,7 +132,8 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 
 ### Phase 2: Transform (dbt)
 - [x] Set up a dbt project connected to BigQuery
-- [ ] Staging models: clean columns, fix units, keep runs only
+- [x] Declare the raw tables as dbt sources
+- [ ] Staging models: pick columns, rename, cast types
 - [ ] Mart models for the dashboard
 - [ ] Add dbt tests and docs
 
