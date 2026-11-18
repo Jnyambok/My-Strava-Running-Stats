@@ -34,5 +34,24 @@ models:
           - not_null
       - name: training_load
         description: Sum of rated runs' load. NULL when no run that week was rated (unknown, not zero).
+  - name: fct_daily_fitness
+    description: One row per day from the first to the last run. Rolling training load (fitness 42-day, fatigue 7-day, form = fitness - fatigue). Unrated runs use the average effort rating.
+    columns:
+      - name: day
+        data_tests:
+          - unique
+          - not_null
+      - name: training_load
+        description: Sum of the day's run loads (effort x minutes). 0 on rest days.
+        data_tests:
+          - not_null
+      - name: estimated_runs
+        description: How many of the day's runs had no effort rating and used the average instead.
+      - name: fitness
+        description: Total load over the last 42 days divided by 42.
+      - name: fatigue
+        description: Total load over the last 7 days divided by 7.
+      - name: form
+        description: Fitness minus fatigue. Positive = fresh, negative = tired.
     
 
