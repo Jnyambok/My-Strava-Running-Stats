@@ -2,7 +2,22 @@
 
 A personal analytics engineering project. It takes my Strava data export, models it in BigQuery with dbt, and publishes a public dashboard with metrics Strava normally keeps behind its paid tier.
 
-> **Status:** 🚧 In progress. See [Progress](#progress) below.
+**🔗 Live dashboard: [jnyambok.github.io/My-Strava-Running-Stats](https://jnyambok.github.io/My-Strava-Running-Stats/)**
+
+[![The dashboard](docs/screenshot.png)](https://jnyambok.github.io/My-Strava-Running-Stats/)
+
+## Top insights
+
+From 117 runs between May 2025 and November 2026:
+
+- **553 km in 55.8 hours of running**, with 3,281 m of climbing.
+- **Fewer runs, twice the distance.** 2026 has fewer runs than 2025 (50 vs 67) but twice the kilometres (369 vs 185). The average run grew from 2.8 km to 7.4 km while training for half marathons.
+- **Slower pace is the point.** Monthly pace slowed from about 5:07/km to 6:55/km as monthly distance grew from 14 km to 84 km. Long runs are run easy, which is why pace sits next to distance on the chart.
+- **Half marathon PB: 2:22:13** at the Standard Chartered Nairobi Marathon (25 Oct 2026), 6 min 21 s faster than three months earlier.
+- **The 10K PB (56:16) was set inside a half marathon.** The best-effort model searches every stretch of every run, not just runs that were exactly 10 km.
+- **An evening runner.** 61% of runs start between 4 and 9 PM, 6 PM is the most common start time, and Monday is the busiest day (32 runs, against 6 on Sundays).
+- **Biggest week: 38 km** (20 July 2026). There were no runs in January and February 2026, and the fitness chart shows the drop and the rebuild to a peak on 4 July 2026.
+- **Form today: +12 (fresh).**
 
 ---
 
@@ -14,7 +29,7 @@ Strava's free tier shows the basics. The more useful training metrics, such as f
 
 ```
 Strava export (zip) ──► Python ──► BigQuery ──► dbt ──► data.json ──► Static website (GitHub Pages)
-   (every 2 weeks)        └──────────────── one command ─────────────────┘
+   (every 2 weeks)        └──────── python pipeline.py ─────────┘
 ```
 
 | Step | Tool | What it does |
@@ -185,7 +200,7 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 - [x] Staging models: pick columns, rename, cast types
 - [x] Tests on the staging models
 - [x] Mart models for the dashboard
-- [ ] Tests and docs on the marts
+- [x] Tests and docs on the marts (33 data tests, descriptions on every model)
 
 ### Phase 3: Metrics
 - [x] Totals
@@ -199,20 +214,93 @@ dbt models never hard-code `strava_raw.activities`. They read it through `{{ sou
 - [x] Page layout with the orange gradient design
 - [x] Charts
 - [x] "Last updated on …" date
-- [ ] Publish on GitHub Pages
+- [x] Publish on GitHub Pages
+- [x] Show the time the data was posted, not just the date
 
 ### Phase 5: Routine
-- [ ] One command runs the whole pipeline
-- [ ] Write the "Running it locally" guide
-- [ ] Final README polish with screenshots
+- [x] One command runs the whole pipeline (`python pipeline.py`)
+- [x] Write the "Running it locally" guide
+- [x] Final README polish with screenshots
+- [ ] Optional: `dbt docs` lineage graph screenshot
+- [ ] Optional: GitHub Actions running `dbt build` on every pull request
 
 ## Project structure
 
-_Will be filled in as the project is built._
+```
+My-Strava-Running-Stats/
+├── pipeline.py              one command: load → dbt build → export
+├── extract/
+│   ├── activities.py        read activities.csv from the export zip
+│   ├── tracks.py            parse the GPX tracks into GPS points
+│   └── load.py              load both into BigQuery (strava_raw)
+├── strava_dbt/
+│   ├── profiles.yml         BigQuery connection (oauth, no keys)
+│   ├── dbt_project.yml      layers: staging = views, marts = tables
+│   ├── models/
+│   │   ├── staging/         sources + stg_ views (rename, cast)
+│   │   ├── intermediate/    int_track_point_distances (GPS maths)
+│   │   └── marts/           fct_ tables the dashboard reads
+│   └── tests/               singular tests (grain, reconciliation)
+├── export/
+│   └── export_data.py       marts → docs/data.json
+├── docs/                    the website (GitHub Pages)
+│   ├── index.html, styles.css, app.js
+│   └── data.json
+└── data/raw/                the Strava export zip (git-ignored)
+```
 
 ## Running it locally
 
-_Coming soon._
+### One-time setup
+
+You need Python 3.11+, the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) and a Google Cloud project with BigQuery (the free sandbox is enough, no billing account).
+
+1. **Clone and install**
+
+   ```bash
+   git clone https://github.com/Jnyambok/My-Strava-Running-Stats.git
+   cd My-Strava-Running-Stats
+   python -m venv .venv
+   .venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+2. **Log in to Google Cloud** (saves credentials that Python and dbt both use; no key files)
+
+   ```bash
+   gcloud auth application-default login
+   ```
+
+3. **Configure**: copy `.env.example` to `.env` and set `GCP_PROJECT_ID` to your project.
+
+4. **Create the raw dataset** `strava_raw` in BigQuery (US multi-region). dbt creates its own `strava` dataset on the first build.
+
+5. **Check dbt can connect**
+
+   ```bash
+   cd strava_dbt
+   dbt debug
+   ```
+
+### Every update (about every two weeks)
+
+1. On strava.com: **Settings → My Account → Download or Delete Your Account → Request your archive.** Strava emails a download link.
+2. Put the zip in `data/raw/` and **delete the old one** (the loader refuses to guess between two zips).
+3. Run the pipeline from the project root:
+
+   ```bash
+   python pipeline.py
+   ```
+
+   It loads the zip into BigQuery, runs `dbt build` (every model and every test), then writes `docs/data.json`. If any step fails, the later steps don't run, so the website never gets data that failed a test.
+4. Preview the site: `python -m http.server 8000 --directory docs`, then open http://localhost:8000.
+5. Publish: commit and push `docs/data.json`. GitHub Pages updates in a minute or two.
+
+### What's automated, and what isn't
+
+- **Automated:** everything after the zip lands in `data/raw/`: loading, all transformations, 33 data tests and the export, in one command.
+- **Not automated, on purpose:** downloading the export. Strava only offers it through a logged-in web page, and scripting that login would break Strava's terms. The API that could replace it now needs a paid subscription. So the routine is one manual download, then one command.
+- **Why not a scheduler?** A nightly job would just rerun the same zip. The pipeline is idempotent, so that's harmless but pointless. New data only arrives when I download a new export, so that's the right moment to run it.
 
 ---
 

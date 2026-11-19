@@ -431,15 +431,23 @@ function render(days) {
   renderPace(cutoff);
 }
 
+// "Last updated" = when this data.json was exported (i.e. posted), shown in
+// Nairobi time, plus the date of the latest run it contains.
 function renderUpdated() {
-  const loaded = new Date(DATA.totals.data_loaded_at);
-  const text = loaded.toLocaleDateString("en-GB", {
+  const posted = new Date(DATA.exported_at || DATA.totals.data_loaded_at);
+  const day = posted.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
     timeZone: "Africa/Nairobi",
   });
-  document.getElementById("updated").textContent = `Last updated on ${text}`;
+  const time = posted.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Africa/Nairobi",
+  });
+  document.getElementById("updated").textContent =
+    `Last updated on ${day} at ${time} (Nairobi) · latest run ${shortDate(DATA.totals.last_run_date)}`;
 }
 
 async function main() {
