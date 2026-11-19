@@ -19,7 +19,7 @@ races (everyday run titles often name my home estate).
 
 import json
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -107,6 +107,10 @@ def run_query(client: bigquery.Client, sql: str) -> list[dict]:
 def main() -> None:
     client = bigquery.Client(project=PROJECT_ID)
     data = {name: run_query(client, sql) for name, sql in QUERIES.items()}
+
+    # When this file was written, i.e. when the dashboard was "posted".
+    # The page shows it as "Last updated on ... at ...".
+    data["exported_at"] = datetime.now(timezone.utc).isoformat()
 
     # The totals table has exactly one row (a dbt test guarantees it).
     data["totals"] = data["totals"][0]

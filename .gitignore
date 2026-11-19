@@ -222,3 +222,10 @@ __marimo__/
 # Project: raw Strava exports (personal data, never commit)
 data/raw/*
 !data/raw/.gitkeep
+
+# Project: personal study notes and drafts (local only)
+notes/
+
+# Editor and assistant settings (local only)
+.vscode/
+.claude/
