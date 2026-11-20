@@ -8,16 +8,16 @@ A personal analytics engineering project. It takes my Strava data export, models
 
 ## Top insights
 
-From 117 runs between May 2025 and November 2026:
+From 127 runs between May 2025 and November 2026 (export of 19 Nov 2026):
 
-- **553 km in 55.8 hours of running**, with 3,281 m of climbing.
-- **Fewer runs, twice the distance.** 2026 has fewer runs than 2025 (50 vs 67) but twice the kilometres (369 vs 185). The average run grew from 2.8 km to 7.4 km while training for half marathons.
+- **569 km in 57.2 hours of running**, with 3,297 m of climbing.
+- **Fewer runs, twice the distance.** 2026 has fewer runs than 2025 (60 vs 67) but more than twice the kilometres (385 vs 185). The average run grew from 2.8 km to 6.4 km while training for half marathons.
 - **Slower pace is the point.** Monthly pace slowed from about 5:07/km to 6:55/km as monthly distance grew from 14 km to 84 km. Long runs are run easy, which is why pace sits next to distance on the chart.
 - **Half marathon PB: 2:22:13** at the Standard Chartered Nairobi Marathon (25 Oct 2026), 6 min 21 s faster than three months earlier.
 - **The 10K PB (56:16) was set inside a half marathon.** The best-effort model searches every stretch of every run, not just runs that were exactly 10 km.
-- **An evening runner.** 61% of runs start between 4 and 9 PM, 6 PM is the most common start time, and Monday is the busiest day (32 runs, against 6 on Sundays).
+- **An evening runner.** 64% of runs start between 4 and 9 PM, 6 PM is the most common start time, and Monday is the busiest day (33 runs, against 6 on Sundays).
 - **Biggest week: 38 km** (20 July 2026). There were no runs in January and February 2026, and the fitness chart shows the drop and the rebuild to a peak on 4 July 2026.
-- **Form today: +12 (fresh).**
+- **Form on 18 Nov 2026: +18 (fresh).**
 
 ---
 
@@ -44,7 +44,7 @@ Strava export (zip) ──► Python ──► BigQuery ──► dbt ──► 
 
 **Cost: free.** BigQuery runs in the free **sandbox**, with no billing account, so it can't be charged. The sandbox shapes the design:
 
-- **No DML** (`INSERT` / `UPDATE` / `MERGE`), so each run fully reloads the raw tables with batch load jobs and dbt builds plain tables and views rather than incremental models. With about 130 activities, a full reload takes seconds.
+- **No DML** (`INSERT` / `UPDATE` / `MERGE`), so each run fully reloads the raw tables with batch load jobs and dbt builds plain tables and views rather than incremental models. With about 140 activities, a full reload takes seconds.
 - **Tables expire after 60 days**, counted from when the table was *created*: reloading with `WRITE_TRUNCATE` doesn't reset the clock. That's fine, because every pipeline run loads the raw tables first (recreating them if they've expired), the export zip is the source of truth, and the website reads its own `data.json`, so it keeps working even if BigQuery is empty.
 - **10 GiB lifetime storage**, so staging models are views (which use no storage) and only the small final tables are stored.
 
@@ -52,7 +52,7 @@ Strava export (zip) ──► Python ──► BigQuery ──► dbt ──► 
 
 What the export actually contains:
 
-- **`activities.csv`**: one row per activity, with 104 columns. The export has 117 runs, 11 walks and 2 hikes, from May 2025 to today.
+- **`activities.csv`**: one row per activity, with 104 columns. The first export had 117 runs, 11 walks and 2 hikes; each new export adds the latest activities (127 runs as of 19 Nov 2026).
 - **`activities/*.gpx`**: one GPS track per activity, with a point roughly every second (position, elevation, time).
 
 What that means for the metrics:
@@ -160,7 +160,7 @@ Each test is a query that returns bad rows; zero rows means pass. `dbt build` ru
 Strava's best efforts are a paid feature, so `fct_best_efforts` finds the fastest 5K, 10K and half inside every run from the 255,651 GPS points.
 
 - **Intermediate layer.** `int_track_point_distances` measures each step with BigQuery GIS (`st_distance` between `st_geogpoint`s) and keeps a running total per activity with `lag()` and `sum() over (partition by activity_id order by point_index)`. `partition by` stops a window from crossing into another run.
-- **Reconciled against Strava.** A test checks that every run's GPS distance is within 5% of Strava's own (actual: +0.65% on average, +2.6% at most, because Strava smooths GPS jitter).
+- **Reconciled against Strava.** A test checks that every run's GPS distance is within 5% of Strava's own (actual: about +0.7% on average, +2.6% at most, because Strava smooths GPS jitter).
 - **The trick.** Comparing every point with every other point is slow. Snapping each track to 10 m marks turns "where was I 5 km later?" into an exact-match self-join (`finish.mark = start.mark + 500`), and the whole model runs in seconds. The cost is up to 10 m (about 3 s) of precision.
 - **No special cases.** A 3 km run has no mark 500, so the join simply produces no 5K for it.
 - **PB history.** `best_time_s = min(best_time_s) over (partition by effort order by run_date)` flags every run that set a new personal best at the time.
